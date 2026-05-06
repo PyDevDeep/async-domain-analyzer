@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "async-domain-analyzer"
+version = "0.1.0"
+description = "Domain Triaging System MVP"
+authors = ["PyDevDeep"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "~3.13.0"
+aiohttp = "^3.9.5"
+beautifulsoup4 = "^4.12.3"
+structlog = "^24.1.0"
+pandas = "^2.2.2"
+python-whois = "^0.9.6"
+tldextract = "^5.1.2"
+certifi = "^2024.2.2"
+chardet = "^5.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+pytest-asyncio = "^0.23.6"
+pytest-mock = "^3.14.0"
+ruff = ">=0.9.0"
+pyright = ">=1.1.400"
+pre-commit = "^3.7.0"
+pytest-cov = "^7.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+exclude = [".venv", "__pycache__", "logs", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "S", "W", "N", "UP", "C4", "SIM", "RUF", "A", "DTZ", "TID", "ASYNC", "PT"]
+ignore = ["F401", "E501", "B008", "RUF001", "RUF002", "RUF003", "N815", "S107"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S108"]
+"**/tests/*" = ["S101", "S105", "S108"]
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/node_modules", "**/.*", "**/__pycache__", "build", "dist", ".venv"]
+pythonVersion = "3.13"
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
