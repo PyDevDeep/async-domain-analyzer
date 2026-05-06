@@ -5,6 +5,7 @@ import aiohttp
 
 from src.config import Config
 from src.logger import logger
+from src.scorer import calculate_score
 from src.scraper_pass1 import (
     analyze_html_content,
     check_ssl_certificate,
@@ -15,10 +16,19 @@ from src.scraper_pass1 import (
 from src.scraper_pass2 import scrape_with_serper
 
 
+def enrich_domain_result(metadata: dict[str, Any]) -> dict[str, Any]:
+    """
+    Adds score, priority, next_action, and reason to the result.
+    Since calculate_score in src.scorer already encapsulates the calculation of all
+    these fields, we simply delegate the processing there.
+    """
+    return calculate_score(metadata)
+
+
 async def analyze_domain(
     session: aiohttp.ClientSession, domain: str, config: Config
 ) -> dict[str, Any]:
-    """Оркеструє Pass 1 (BeautifulSoup) та Pass 2 (Serper API fallback)."""
+    """Orchestrates Pass 1 (BeautifulSoup) and Pass 2 (Serper API fallback) with Scoring integration."""
     result: dict[str, Any] = {
         "domain": domain,
         "final_url": None,
@@ -97,4 +107,4 @@ async def analyze_domain(
             err_msg = f"Pass2 Error: {fallback_res.get('reason')}"
             result["error"] = f"{result['error']} | {err_msg}" if result["error"] else err_msg
 
-    return result
+    return enrich_domain_result(result)
