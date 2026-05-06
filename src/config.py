@@ -1,6 +1,11 @@
 import os
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
+# Automatically load variables from the .env file into the current environment
+load_dotenv()
+
 
 @dataclass(frozen=True)
 class Config:
