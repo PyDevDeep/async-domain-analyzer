@@ -71,6 +71,21 @@ async def scrape_with_serper(session: aiohttp.ClientSession, domain: str) -> dic
         async with session.post(
             api_url, headers=headers, data=payload, timeout=aiohttp.ClientTimeout(total=15)
         ) as response:
+            if response.status == 401:
+                logger.error("Invalid Serper API key")
+                await serper_limiter.record_actual_cost(0, estimated_cost=estimated_cost)
+                raise ValueError("Invalid Serper API key")  # Fail-fast
+
+            if response.status == 429:
+                logger.warning("Serper rate limit hit", domain=domain)
+                result["status"] = "error"
+                result["reason"] = "Rate limit exceeded"
+                await serper_limiter.record_actual_cost(0, estimated_cost=estimated_cost)
+                return result  # No retry, return error directly
+
+            if response.status >= 500:
+                response.raise_for_status()  # Force exception to trigger @async_retry
+
             if response.status != 200:
                 result["status"] = "error"
                 result["reason"] = f"Serper HTTP Error: {response.status}"
@@ -83,7 +98,6 @@ async def scrape_with_serper(session: aiohttp.ClientSession, domain: str) -> dic
             # Schema validation
             required_fields = ["text", "metadata", "credits"]
             if not all(field in data for field in required_fields):
-                logger.error("Serper response schema mismatch", response=data)
                 result["status"] = "error"
                 result["reason"] = "Invalid API response schema"
                 await serper_limiter.record_actual_cost(0, estimated_cost=estimated_cost)
@@ -98,8 +112,8 @@ async def scrape_with_serper(session: aiohttp.ClientSession, domain: str) -> dic
             parsed_data = parse_serper_metadata(data)
             result.update(parsed_data)
 
-            logger.info("Serper fallback successful", domain=domain, cost=actual_cost)
-
+    except ValueError:
+        raise  # Прокидаємо ValueError далі, щоб він крашнув скрипт згідно fail-fast
     except Exception as e:
         logger.warning("Serper API request failed", domain=domain, error=str(e))
         result["status"] = "error"

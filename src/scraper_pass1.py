@@ -14,9 +14,10 @@ from src.logger import logger
 from src.retry import async_retry
 
 
+@async_retry(max_retries=3, base_delay=1.0)
 async def fetch_url(
     session: aiohttp.ClientSession, url: str, req_timeout: int
-) -> tuple[int, str, float]:
+) -> tuple[int | None, str, float | None]:
     """Performs an HTTP GET request, returns status, body, and latency"""
     start_time = time.perf_counter()
     client_timeout = aiohttp.ClientTimeout(total=req_timeout)
@@ -35,9 +36,15 @@ async def fetch_url(
             logger.info("HTTP fetch complete", url=url, status=status_code, latency_ms=latency_ms)
 
             return status_code, html_body, latency_ms
+    except TimeoutError:
+        logger.warning("Request timeout", domain=url)
+        return None, "", None
+    except aiohttp.ClientConnectorError as e:
+        logger.warning("Connection refused", domain=url, error=str(e))
+        return None, "", None
     except Exception as e:
         logger.error("HTTP fetch failed", url=url, error=str(e))
-        raise
+        return None, "", None
 
 
 def check_ssl_certificate(domain: str) -> dict[str, Any]:
