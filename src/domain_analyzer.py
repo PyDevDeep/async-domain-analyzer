@@ -58,7 +58,7 @@ async def analyze_domain(
 
         # First, execute fetch_url
         status_code, html_body, latency = await fetch_url(
-            session, final_url, timeout=config.HTTP_TIMEOUT_TOTAL
+            session, final_url, req_timeout=config.HTTP_TIMEOUT_TOTAL
         )
 
         result["status_code"] = status_code
