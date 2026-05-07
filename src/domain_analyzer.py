@@ -96,34 +96,51 @@ async def analyze_domain(
     needs_fallback = not pass1_success or not result["has_live_content"]
 
     if needs_fallback:
-        logger.info("Triggering Serper.dev fallback", domain=domain)
-        result["fallback_used"] = True
+        # Graceful Degradation: if the key is not set, ignore Pass 2
+        if not config.SERPER_API_KEY or not config.SERPER_API_KEY.strip():
+            logger.warning("SERPER_API_KEY not provided, skipping Pass 2 fallback", domain=domain)
+            err_msg = "Pass2 Skipped: No API Key"
+            result["error"] = f"{result['error']} | {err_msg}" if result["error"] else err_msg
 
-        try:
-            fallback_res = await scrape_with_serper(session, domain)
-            result["credits_used"] = fallback_res.get("credits_used", 0)
+            if not pass1_success:
+                logger.error("Both Pass 1 and Pass 2 failed or skipped", domain=domain)
+                result["error"] = f"All scraping methods failed: {result['error']}"
+        else:
+            logger.info("Triggering Serper.dev fallback", domain=domain)
+            result["fallback_used"] = True
 
-            if fallback_res["status"] == "success":
-                result["has_live_content"] = fallback_res.get("has_live_content", False)
-                result["html_title"] = fallback_res.get("title")
-                result["meta_description"] = fallback_res.get("meta_description")
-                result["word_count"] = fallback_res.get("word_count", 0)
-            else:
-                # Aggregation of errors
-                err_msg = f"Pass2 Error: {fallback_res.get('reason')}"
-                result["error"] = f"{result['error']} | {err_msg}" if result["error"] else err_msg
+            try:
+                fallback_res = await scrape_with_serper(session, domain)
+                result["credits_used"] = fallback_res.get("credits_used", 0)
 
-                # If both failed
-                if not pass1_success:
-                    logger.error("Both Pass 1 and Pass 2 failed", domain=domain)
-                    result["error"] = "All scraping methods failed"
+                if fallback_res["status"] == "success":
+                    result["has_live_content"] = fallback_res.get("has_live_content", False)
+                    result["html_title"] = fallback_res.get("title")
+                    result["meta_description"] = fallback_res.get("meta_description")
+                    result["word_count"] = fallback_res.get("word_count", 0)
+                else:
+                    # Aggregation of errors
+                    err_msg = f"Pass2 Error: {fallback_res.get('reason')}"
+                    result["error"] = (
+                        f"{result['error']} | {err_msg}" if result["error"] else err_msg
+                    )
 
-        except ValueError as e:
-            # Fail-fast for Invalid API Key
-            raise e
-        except Exception as e:
-            # Protection against the entire batch failing
-            logger.error("Both Pass 1 and Pass 2 failed", domain=domain, error=str(e))
-            result["error"] = "All scraping methods failed"
+                    # If both failed
+                    if not pass1_success:
+                        logger.error("Both Pass 1 and Pass 2 failed", domain=domain)
+                        result["error"] = f"All scraping methods failed: {result['error']}"
+
+            except ValueError as e:
+                # Fail-fast for Invalid API Key
+                raise e
+            except Exception as e:
+                # Protection against the entire batch failing
+                logger.error("Both Pass 1 and Pass 2 failed", domain=domain, error=str(e))
+                err_msg = f"Pass2 Exception: {type(e).__name__} - {e!s}"
+                result["error"] = (
+                    f"All scraping methods failed: {result['error']} | {err_msg}"
+                    if result["error"]
+                    else f"All scraping methods failed: {err_msg}"
+                )
 
     return enrich_domain_result(result)

@@ -7,22 +7,23 @@ from src.logger import logger
 
 def generate_summary_report(results: list[dict[str, Any]], csv_path: str) -> str:
     """
-    Генерує аналітичний звіт у форматі Markdown (контент англійською).
+    Generates an analytical report in Markdown format summarizing the processing results,
+    including statistics, prioritization metrics, and top scored domains.
     """
     total = len(results)
     success = sum(1 for r in results if r.get("status") == "success")
     errors = sum(1 for r in results if r.get("status") == "error")
 
-    # Пріоритети
+    # Priorities
     high = sum(1 for r in results if r.get("priority") == "High")
     medium = sum(1 for r in results if r.get("priority") == "Medium")
     low = sum(1 for r in results if r.get("priority") == "Low")
 
-    # Витрати
+    # Expenses/Credits
     total_credits = sum(r.get("credits_used", 0) for r in results)
     fallbacks = sum(1 for r in results if r.get("fallback_used", False))
 
-    # Формування шляху (той самий, що у CSV, але .md)
+    # Format the path (same directory as CSV, but with .md extension)
     report_path = csv_path.replace(".csv", "_summary.md")
 
     now_str = datetime.now(UTC).strftime(format="%Y-%m-%d %H:%M:%S")
@@ -47,7 +48,7 @@ Input source: `{os.path.basename(csv_path)}`
 
 ## 🔍 Top Interesting Domains
 """
-    # Додаємо топ-5 доменів за рейтингом
+    # Add top-5 domains by score
     top_domains = sorted(
         [r for r in results if r.get("score")], key=lambda x: x.get("score", 0), reverse=True
     )[:5]
