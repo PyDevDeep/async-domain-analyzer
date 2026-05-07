@@ -21,25 +21,34 @@ def calculate_score(domain_data: dict[str, Any]) -> dict[str, Any]:
     reasons: list[str] = []
 
     # 2. SSL Validation (+20 points)
-    if domain_data.get("ssl_valid"):
+    ssl_valid = domain_data.get("ssl_valid", False)
+    days_expiry = domain_data.get("days_until_expiry", -999)
+
+    if ssl_valid:
         score += 20
         reasons.append("Valid SSL")
+    elif days_expiry > -90:
+        score += 10
+        reasons.append("SSL expired recently (<90 days)")
     else:
         reasons.append("No/Invalid SSL")
 
-    # 3. Domain age (+20 points for > 365 days, +10 for > 30 days)
+    # 3. Domain age (+20 points for > 730 days, +10 for > 365 days,)
     age = domain_data.get("domain_age_days")
-    if age is not None:
-        if age > 365:
-            score += 20
-            reasons.append("Age > 1 year")
-        elif age > 30:
-            score += 10
-            reasons.append("Age > 30 days")
-        else:
-            reasons.append("New domain (< 30 days)")
+    if age is None:
+        reasons.append("Unknown age (WHOIS fail)")
+        # score += 0 (вже за замовчуванням 0)
+    elif age < 30:
+        reasons.append(f"New domain ({age} days)")
+        # score += 0
+    elif age >= 730:
+        score += 20
+        reasons.append("Established domain (>= 2 years)")
     else:
-        reasons.append("Unknown age")
+        # Лінійна інтерполяція: ((age - 30) / (730 - 30)) * 20
+        interpolation_score = ((age - 30) / 700) * 20
+        score += round(interpolation_score, 2)
+        reasons.append(f"Domain age: {age} days (linear score)")
 
     # 4. Presence of live content (+40 points)
     if domain_data.get("has_live_content"):
@@ -50,14 +59,16 @@ def calculate_score(domain_data: dict[str, Any]) -> dict[str, Any]:
 
     # 5. Text volume (+20 points for > 100 words, +10 for > 50 words)
     words = domain_data.get("word_count", 0)
-    if words > 100:
+    if words >= 500:
         score += 20
-        reasons.append("High word count")
-    elif words > 50:
-        score += 10
-        reasons.append("Medium word count")
+        reasons.append(f"High word count ({words})")
+    elif words >= 100:
+        # Лінійна інтерполяція: ((words - 100) / 400) * 20
+        v_score = ((words - 100) / 400) * 20
+        score += round(v_score, 2)
+        reasons.append(f"Medium word count ({words})")
     else:
-        reasons.append("Low word count")
+        reasons.append(f"Low word count ({words})")
 
     domain_data["score"] = score
     domain_data["reason"] = " | ".join(reasons)
