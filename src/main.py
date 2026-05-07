@@ -12,6 +12,7 @@ from src.config import config
 from src.domain_analyzer import analyze_domain
 from src.exporter import export_to_csv
 from src.logger import logger
+from src.report_generator import generate_summary_report
 
 
 async def process_single_domain(
@@ -167,6 +168,9 @@ def main() -> None:
     )
 
     output_file = export_to_csv(processed_results)
+
+    if output_file:
+        generate_summary_report(processed_results, output_file)
 
     logger.info(
         "Triaging completed successfully",

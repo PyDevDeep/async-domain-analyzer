@@ -56,7 +56,7 @@ async def analyze_domain(
 
         result["final_url"] = final_url
 
-        # Спочатку виконуємо fetch_url (Task 5.1.2)
+        # First, execute fetch_url
         status_code, html_body, latency = await fetch_url(
             session, final_url, timeout=config.HTTP_TIMEOUT_TOTAL
         )
@@ -64,12 +64,12 @@ async def analyze_domain(
         result["status_code"] = status_code
         result["response_time_ms"] = round(latency, 2) if latency else None
 
-        # Перевірка на None (timeout/connection error)
+        # Check for None (timeout/connection error)
         if status_code is None:
             result["error"] = "Network timeout or connection refused"
             pass1_success = False
         else:
-            # ТІЛЬКИ якщо статус є, виконуємо блокуючі SSL/WHOIS
+            # ONLY if the status exists, execute blocking SSL/WHOIS
             loop = asyncio.get_running_loop()
             domain_age = await loop.run_in_executor(None, get_domain_age, domain)
             ssl_data = await loop.run_in_executor(None, check_ssl_certificate, domain)
@@ -109,11 +109,11 @@ async def analyze_domain(
                 result["meta_description"] = fallback_res.get("meta_description")
                 result["word_count"] = fallback_res.get("word_count", 0)
             else:
-                # Task 5.1.1: Aggregation of errors
+                # Aggregation of errors
                 err_msg = f"Pass2 Error: {fallback_res.get('reason')}"
                 result["error"] = f"{result['error']} | {err_msg}" if result["error"] else err_msg
 
-                # Якщо обидва впали
+                # If both failed
                 if not pass1_success:
                     logger.error("Both Pass 1 and Pass 2 failed", domain=domain)
                     result["error"] = "All scraping methods failed"
@@ -122,7 +122,7 @@ async def analyze_domain(
             # Fail-fast for Invalid API Key
             raise e
         except Exception as e:
-            # Захист від падіння всього батчу
+            # Protection against the entire batch failing
             logger.error("Both Pass 1 and Pass 2 failed", domain=domain, error=str(e))
             result["error"] = "All scraping methods failed"
 
