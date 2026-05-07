@@ -28,6 +28,9 @@ cp _env.example .env
 
 # 5. Запустити triaging
 poetry run python -m src.main --input data/seeds.csv --workers 5
+
+# 6. Запустити triaging для повторної перевірки failed
+poetry run python -m src.main --input data/seeds.csv --rerun-failed
 ```
 
 **Готово!** Результати у `data/output_YYYYMMDD_HHMMSS.csv` + `summary.md`

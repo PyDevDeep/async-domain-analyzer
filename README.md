@@ -28,6 +28,10 @@ cp _env.example .env
 
 # 5. Run triaging
 poetry run python -m src.main --input data/seeds.csv --workers 5
+
+# 6. Run triaging to re-verify failed
+poetry run python -m src.main --input data/seeds.csv --rerun-failed
+
 ```
 
 **Done!** Results are saved to `data/output_YYYYMMDD_HHMMSS.csv` + `summary.md`
