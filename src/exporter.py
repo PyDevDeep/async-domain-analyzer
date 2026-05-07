@@ -2,7 +2,7 @@ import os
 from datetime import UTC, datetime
 from typing import Any
 
-import pandas as pd
+import pandas as pd  # type: ignore[reportMissingTypeStubs]
 import tldextract
 
 from src.config import config
@@ -83,7 +83,7 @@ def export_to_csv(results: list[dict[str, Any]], output_path: str | None = None)
         "error",
     ]
 
-    df = pd.DataFrame(results)
+    df: Any = pd.DataFrame(results)
 
     # Ensuring all mandatory columns are present
     for col in expected_columns:
