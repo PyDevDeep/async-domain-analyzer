@@ -104,10 +104,15 @@ def parse_arguments() -> argparse.Namespace:
         default=config.DEFAULT_WORKERS,
         help="Number of concurrent asynchronous workers",
     )
+    parser.add_argument(
+        "--rerun-failed",
+        action="store_true",
+        help="Re-process only domains with status 'error' in the input CSV",
+    )
     return parser.parse_args()
 
 
-def load_domains(input_path: Path) -> list[str]:
+def load_domains(input_path: Path, rerun_failed: bool = False) -> list[str]:
     """Synchronous file reading to avoid blocking operations in an async context."""
     if not input_path.exists():
         logger.critical("Input file not found", filepath=str(input_path))
@@ -119,8 +124,15 @@ def load_domains(input_path: Path) -> list[str]:
             reader = csv.DictReader(f)
             for row in reader:
                 domain = row.get("domain", "").strip().lower()
-                if domain:
-                    raw_domains.append(domain)
+                if not domain:
+                    continue
+
+                if rerun_failed:
+                    status = row.get("status", "").strip().lower()
+                    if status == "success":
+                        continue
+
+                raw_domains.append(domain)
     except Exception as e:
         logger.critical("Failed to read input CSV", error=str(e))
         sys.exit(1)
@@ -133,17 +145,27 @@ def main() -> None:
     input_path = Path(args.input)
 
     # Synchronous loading and filtering
-    raw_domains = load_domains(input_path)
-    unique_domains = list(set(raw_domains))
+    is_rerun: bool = getattr(args, "rerun_failed", False)
+    workers_count: int = getattr(args, "workers", config.DEFAULT_WORKERS)
+
+    raw_domains: list[str] = load_domains(input_path, rerun_failed=is_rerun)
+    unique_domains: list[str] = list(set(raw_domains))
 
     if not unique_domains:
-        logger.warning("No valid domains found in input file")
+        logger.warning("No valid domains found to process")
         sys.exit(0)
 
-    # Asynchronous pipeline execution
-    processed_results = asyncio.run(process_domains_batch(unique_domains, max_workers=args.workers))
+    if is_rerun:
+        logger.info(
+            "Rerun failed mode active: clearing cache for target domains", count=len(unique_domains)
+        )
+        for domain in unique_domains:
+            cache_manager.delete(domain)
 
-    # Synchronous export of results
+    processed_results = asyncio.run(
+        process_domains_batch(unique_domains, max_workers=workers_count)
+    )
+
     output_file = export_to_csv(processed_results)
 
     logger.info(
