@@ -108,15 +108,15 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--rerun-failed",
         action="store_true",
-        help="Re-process only domains with status 'error' in the input CSV",
+        help="Re-process only domains that are not 'success' in the cache",
     )
     return parser.parse_args()
 
 
-def load_domains(input_path: Path, rerun_failed: bool = False) -> list[str]:
+def load_domains(input_path: Path) -> list[str]:
     """
     Loads domains from the input file.
-    Supports files with and without headers, handles BOM, and filters by status if rerun_failed is True.
+    Supports files with and without headers, and handles BOM.
     """
     try:
         # Read the first line using utf-8-sig to ignore BOM (\ufeff)
@@ -126,20 +126,9 @@ def load_domains(input_path: Path, rerun_failed: bool = False) -> list[str]:
         # Determine if there is a header (starts with 'domain')
         if first_line.startswith("domain"):
             df = pd.read_csv(input_path)
-
-            if rerun_failed:
-                if "status" not in df.columns:
-                    logger.critical("Cannot rerun failed: 'status' column missing")
-                    sys.exit(1)
-                df = df[df["status"] != "success"]
-
             raw_domains = df["domain"].dropna().astype(str).tolist()
         else:
             # It's a file without headers (a simple list)
-            if rerun_failed:
-                logger.critical("Cannot rerun failed: input file lacks headers")
-                sys.exit(1)
-
             df = pd.read_csv(input_path, header=None)
             raw_domains = df.iloc[:, 0].dropna().astype(str).tolist()
 
@@ -164,7 +153,7 @@ def main() -> None:
     is_rerun: bool = getattr(args, "rerun_failed", False)
     workers_count: int = getattr(args, "workers", config.DEFAULT_WORKERS)
 
-    raw_domains: list[str] = load_domains(input_path, rerun_failed=is_rerun)
+    raw_domains: list[str] = load_domains(input_path)
     unique_domains: list[str] = list(set(raw_domains))
 
     if not unique_domains:
@@ -172,11 +161,23 @@ def main() -> None:
         sys.exit(0)
 
     if is_rerun:
-        logger.info(
-            "Rerun failed mode active: clearing cache for target domains", count=len(unique_domains)
-        )
+        filtered_domains: list[str] = []
         for domain in unique_domains:
-            cache_manager.delete(domain)
+            cached_data = cache_manager.get(domain)
+            if cached_data and cached_data.get("status") == "success":
+                continue
+            else:
+                cache_manager.delete(domain)
+                filtered_domains.append(domain)
+
+        unique_domains = filtered_domains
+        logger.info(
+            "Rerun failed mode active: filtered domains to re-process", count=len(unique_domains)
+        )
+
+        if not unique_domains:
+            logger.info("All domains are already successful. Nothing to rerun.")
+            sys.exit(0)
 
     processed_results = asyncio.run(
         process_domains_batch(unique_domains, max_workers=workers_count)

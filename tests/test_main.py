@@ -95,8 +95,17 @@ def test_main_rerun_failed(
 ) -> None:
     """Verifies the operation of the --rerun-failed flag (re-processing only errors)."""
 
-    # Simulate an empty cache
-    mock_cache.get.return_value = None
+    # Simulate cache using a dictionary
+    fake_cache = {"google.com": {"status": "success"}, "failed-site.org": {"status": "error"}}
+
+    def cache_get_side_effect(domain):
+        return fake_cache.get(domain)
+
+    def cache_delete_side_effect(domain):
+        fake_cache.pop(domain, None)
+
+    mock_cache.get.side_effect = cache_get_side_effect
+    mock_cache.delete.side_effect = cache_delete_side_effect
 
     async def mock_analyze_side_effect(session: Any, domain: str, config: Any) -> dict[str, Any]:
         return {
