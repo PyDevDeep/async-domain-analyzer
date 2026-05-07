@@ -1,11 +1,11 @@
 import argparse
 import asyncio
-import csv
 import sys
 from pathlib import Path
 from typing import Any
 
 import aiohttp
+import pandas as pd  # type: ignore[reportMissingTypeStubs]
 
 from src.cache import cache_manager
 from src.config import config
@@ -114,28 +114,40 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def load_domains(input_path: Path, rerun_failed: bool = False) -> list[str]:
-    """Synchronous file reading to avoid blocking operations in an async context."""
-    if not input_path.exists():
-        logger.critical("Input file not found", filepath=str(input_path))
-        sys.exit(1)
-
-    raw_domains: list[str] = []
+    """
+    Loads domains from the input file.
+    Supports files with and without headers, handles BOM, and filters by status if rerun_failed is True.
+    """
     try:
-        with open(input_path, encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                domain = row.get("domain", "").strip().lower()
-                if not domain:
-                    continue
+        # Read the first line using utf-8-sig to ignore BOM (\ufeff)
+        with open(input_path, encoding="utf-8-sig") as f:
+            first_line = f.readline().strip().lower()
 
-                if rerun_failed:
-                    status = row.get("status", "").strip().lower()
-                    if status == "success":
-                        continue
+        # Determine if there is a header (starts with 'domain')
+        if first_line.startswith("domain"):
+            df = pd.read_csv(input_path)
 
-                raw_domains.append(domain)
+            if rerun_failed:
+                if "status" not in df.columns:
+                    logger.critical("Cannot rerun failed: 'status' column missing")
+                    sys.exit(1)
+                df = df[df["status"] != "success"]
+
+            raw_domains = df["domain"].dropna().astype(str).tolist()
+        else:
+            # It's a file without headers (a simple list)
+            if rerun_failed:
+                logger.critical("Cannot rerun failed: input file lacks headers")
+                sys.exit(1)
+
+            df = pd.read_csv(input_path, header=None)
+            raw_domains = df.iloc[:, 0].dropna().astype(str).tolist()
+
+        # Clean spaces and empty strings
+        raw_domains = [d.strip() for d in raw_domains if d.strip()]
+
     except Exception as e:
-        logger.critical("Failed to read input CSV", error=str(e))
+        logger.critical("Failed to read input file", file=str(input_path), error=str(e))
         sys.exit(1)
 
     return raw_domains
