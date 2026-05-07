@@ -3,8 +3,8 @@ from typing import Any
 
 def calculate_score(domain_data: dict[str, Any]) -> dict[str, Any]:
     """
-    Обчислює score (0-100), priority та next_action для домену
-    на основі зібраних метаданих.
+    Calculates the score (0-100), priority, and next_action for a domain
+    based on the gathered metadata.
     """
     # 1. Handling critical scraping errors
     # Keeping the requirement: failed domains have status="error" and score=0

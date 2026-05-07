@@ -142,6 +142,9 @@ def load_domains(input_path: Path, rerun_failed: bool = False) -> list[str]:
 
 
 def main() -> None:
+    """
+    Entry point of the application. Parses arguments, loads domains, processes them, and exports results.
+    """
     args = parse_arguments()
     input_path = Path(args.input)
 

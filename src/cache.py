@@ -14,16 +14,25 @@ class CacheManager:
     """
 
     def __init__(self, db_path: str = config.CACHE_DB_PATH):
+        """
+        Initializes the CacheManager with the given database path.
+        """
         self.db_path = db_path
         self._init_schema()
 
     def _get_connection(self) -> sqlite3.Connection:
+        """
+        Establishes and returns a connection to the SQLite database.
+        """
         # timeout=30.0 prevents lock contention during concurrent writes
         conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
         return conn
 
     def _init_schema(self) -> None:
+        """
+        Initializes the database schema if it does not exist.
+        """
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()

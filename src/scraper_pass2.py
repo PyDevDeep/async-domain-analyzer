@@ -113,7 +113,7 @@ async def scrape_with_serper(session: aiohttp.ClientSession, domain: str) -> dic
             result.update(parsed_data)
 
     except ValueError:
-        raise  # Прокидаємо ValueError далі, щоб він крашнув скрипт згідно fail-fast
+        raise  # Propagate ValueError further to crash the script according to fail-fast
     except Exception as e:
         logger.warning("Serper API request failed", domain=domain, error=str(e))
         result["status"] = "error"

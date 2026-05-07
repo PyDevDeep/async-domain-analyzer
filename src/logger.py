@@ -6,6 +6,9 @@ import structlog
 
 
 def configure_logging() -> None:
+    """
+    Configures the structlog logging system, setting up console and file handlers.
+    """
     # Ensure the log directory exists
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)

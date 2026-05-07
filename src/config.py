@@ -9,6 +9,10 @@ load_dotenv()
 
 @dataclass(frozen=True)
 class Config:
+    """
+    Configuration data class for the application settings.
+    """
+
     # API Credentials
     SERPER_API_KEY: str = os.getenv("SERPER_API_KEY", "")
 
