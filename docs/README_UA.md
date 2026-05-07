@@ -389,7 +389,7 @@ Reason: Старий, але мертвий — типовий парковий 
 - У кінці `main.py` запустити `prometheus_client.start_http_server(8000)`
 - Acceptance criteria: Grafana dashboard показує live metrics на порту 8000
 
-#### 6. Slack/Email Notifications для High-Priority Domains (2 години)
+#### 6. Slack/Email Notifications для High-Priority Domains
 **Що:** Real-time алерти коли знайдено домен зі score > 90
 **Чому:** Швидка реакція на топові leads збільшує конверсію.
 **Імплементація:**
@@ -402,7 +402,15 @@ Reason: Старий, але мертвий — типовий парковий 
 - CLI параметр: `--notify-slack --slack-webhook=YOUR_WEBHOOK`
 - Acceptance criteria: Тестовий запуск надсилає повідомлення у Slack за < 5 сек після детекту
 
-#### 7. Auto-Retry Logic з Exponential Backoff
+#### 7. Playwright Hybrid Crawling (Anti-Blocking)
+*   **The Problem:** Serper та стандартні `aiohttp` запити часто блокуються через Cloudflare, Akamai або нестандартний рендеринг (SPA).
+*   **The Solution:** Впровадження третього етапу аналізу (Pass 3) з використанням **Playwright**.
+    -   **Headless Browsing:** Емуляція реального користувача для сайтів, що повертають 403/401 при звичайному запиті.
+    -   **Stealth Plugin:** Використання `playwright-stealth` для приховування ознак автоматизації.
+    -   **Dynamic Rendering:** Очікування завантаження JS-контенту, що дає змогу витягнути більше даних для скорингу.
+    -   **Smart Fallback:** Playwright запускається лише тоді, коли легкий `HTTP GET` зазнав невдачі, що економить ресурси.
+
+#### 8. Auto-Retry Logic з Exponential Backoff
 **Що:** Розширити `@async_retry` decorator для smart backoff
 **Чому:** Зараз retry фіксований (1s → 2s → 4s). Для rate limits краще exponential + jitter.
 **Імплементація:**

@@ -319,9 +319,9 @@ Reason: Old but dead — a typical parked domain
 
 ## 🚀 What I Would Add in 2 Days
 
-### Day 1: Advanced Filtering & Enrichment (8 hours)
+### Day 1: Advanced Filtering & Enrichment
 
-#### 1. Google Sheets API Integration (3 hours)
+#### 1. Google Sheets API Integration
 **What:** Automatic synchronization of results to Google Sheets
 **Why:** Currently the output is a local CSV. For collaboration, real-time Google Sheets is preferable.
 **Implementation:**
@@ -333,7 +333,7 @@ Reason: Old but dead — a typical parked domain
 - CLI parameter: `--export-sheets --sheet-id=YOUR_SHEET_ID`
 - Acceptance criteria: after `poetry run python src/main.py --export-sheets`, results appear in Google Sheets within < 30 sec
 
-#### 2. Email Domain Extraction + MX Record Check (2 hours)
+#### 2. Email Domain Extraction + MX Record Check
 **What:** Extract the email domain from contact forms and check for MX records
 **Why:** The presence of working MX records increases the likelihood that the company is active.
 **Implementation:**
@@ -345,7 +345,7 @@ Reason: Old but dead — a typical parked domain
   - If MX records exist → +5 points to score
 - Acceptance criteria: For domains with email in contacts, score increases by 5
 
-#### 3. AI-Powered Niche Detection via Claude API (3 hours)
+#### 3. AI-Powered Niche Detection via Claude API
 **What:** Automatic categorization of site niche (e-commerce, SaaS, blog, portfolio)
 **Why:** Allows filtering domains by industry without manual review.
 **Implementation:**
@@ -360,9 +360,9 @@ Reason: Old but dead — a typical parked domain
 
 ---
 
-### Day 2: Scalability & Monitoring (8 hours)
+### Day 2: Scalability & Monitoring
 
-#### 4. Redis Cache Instead of SQLite (3 hours)
+#### 4. Redis Cache Instead of SQLite
 **What:** Migrate from SQLite to Redis for distributed caching
 **Why:** SQLite has write lock contention with parallel workers. Redis enables atomic operations + TTL.
 **Implementation:**
@@ -376,7 +376,7 @@ Reason: Old but dead — a typical parked domain
 - Toggle in `main.py`: `--cache-backend=redis` or `--cache-backend=sqlite`
 - Acceptance criteria: When running with Redis cache, no sqlite3.OperationalError occurs
 
-#### 5. Prometheus Metrics Exporter (2 hours)
+#### 5. Prometheus Metrics Exporter
 **What:** Real-time scraping process metrics (throughput, error rate, avg response time)
 **Why:** For production monitoring and debugging bottlenecks.
 **Implementation:**
@@ -389,7 +389,7 @@ Reason: Old but dead — a typical parked domain
 - At the end of `main.py`, start `prometheus_client.start_http_server(8000)`
 - Acceptance criteria: Grafana dashboard shows live metrics on port 8000
 
-#### 6. Slack/Email Notifications for High-Priority Domains (2 hours)
+#### 6. Slack/Email Notifications for High-Priority Domains
 **What:** Real-time alerts when a domain with score > 90 is found
 **Why:** Fast reaction to top leads increases conversion.
 **Implementation:**
@@ -402,7 +402,15 @@ Reason: Old but dead — a typical parked domain
 - CLI parameter: `--notify-slack --slack-webhook=YOUR_WEBHOOK`
 - Acceptance criteria: A test run sends a Slack message within < 5 sec of detection
 
-#### 7. Auto-Retry Logic with Exponential Backoff (1 hour)
+#### 7. Playwright Hybrid Crawling (Anti-Blocking)
+* **The Problem:** Serper and standard `aiohttp` requests are often blocked by Cloudflare, Akamai, or non-standard rendering (SPA).
+* **The Solution:** Implementation of the third analysis stage (Pass 3) using **Playwright**.
+    -   **Headless Browsing:** Emulation of a real user for sites returning 403/401 with a standard request.
+    -   **Stealth Plugin:** Using `playwright-stealth` to hide signs of automation.
+    -   **Dynamic Rendering:** Waiting for JS content to load, which allows extracting more data for scoring.
+    -   **Smart Fallback:** Playwright is triggered only when a lightweight `HTTP GET` fails, which saves resources.
+
+#### 8. Auto-Retry Logic with Exponential Backoff
 **What:** Extend the `@async_retry` decorator for smart backoff
 **Why:** Currently retry is fixed (1s → 2s → 4s). For rate limits, exponential + jitter is preferable.
 **Implementation:**
