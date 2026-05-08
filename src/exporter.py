@@ -93,6 +93,15 @@ def export_to_csv(results: list[dict[str, Any]], output_path: str | None = None)
     # Discarding unnecessary columns (e.g., 'fallback_used') and aligning the order
     df = df[expected_columns]
 
+    if config.EXPORT_SORT_BY_RELEVANCE:
+        # Create a temporary sorting column to handle None/NaN safely
+        sort_score: Any = pd.to_numeric(df["score"], errors="coerce").fillna(-1)  # type: ignore
+        df = (
+            df.assign(_sort_score=sort_score)
+            .sort_values(by=["_sort_score", "domain"], ascending=[False, True])
+            .drop(columns=["_sort_score"])
+        )
+
     try:
         # Writing with utf-8-sig (BOM) for correct import
         df.to_csv(output_path, index=False, encoding="utf-8-sig")

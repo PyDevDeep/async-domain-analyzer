@@ -30,6 +30,9 @@ class Config:
 
     # I/O Directories
     OUTPUT_DIR: str = "data"
+    EXPORT_SORT_BY_RELEVANCE: bool = (
+        os.getenv("EXPORT_SORT_BY_RELEVANCE", "false").lower() == "true"
+    )
 
 
 config = Config()

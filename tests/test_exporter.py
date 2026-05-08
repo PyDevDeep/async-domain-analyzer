@@ -71,3 +71,22 @@ def test_export_to_csv_success(tmp_path: Path) -> None:
     assert df.loc[0, "scrape_method"] == "bs4"
     assert df.loc[1, "scrape_method"] == "serper"
     assert "Fallback to Serper.dev" in str(df.loc[1, "notes"])
+
+
+def test_export_to_csv_sorting(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verifies sorting by relevance (score) and alphabetically by domain."""
+    new_config = replace(config, EXPORT_SORT_BY_RELEVANCE=True)
+    monkeypatch.setattr("src.exporter.config", new_config)
+
+    output_file = tmp_path / "test_sort.csv"
+    mock_results = [
+        {"domain": "b.com", "score": 50, "status": "success"},
+        {"domain": "c.com", "score": 100, "status": "success"},
+        {"domain": "a.com", "score": 50, "status": "success"},
+        {"domain": "d.com", "score": None, "status": "error"},
+    ]
+    export_to_csv(mock_results, output_path=str(output_file))
+
+    df = pd.read_csv(output_file)
+    domains = df["domain"].tolist()
+    assert domains == ["c.com", "a.com", "b.com", "d.com"]

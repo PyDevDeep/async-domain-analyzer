@@ -46,16 +46,13 @@ def test_assign_priority_medium() -> None:
     mock_data = {
         "domain": "average-site.net",
         "ssl_valid": True,
-        "domain_age_days": 40,
-        "has_live_content": False,
+        "domain_age_days": 400,
+        "has_live_content": True,
         "word_count": 60,
         "error": None,
         "status_code": 200,
     }
 
-    result = calculate_score(mock_data)
-
-    mock_data["domain_age_days"] = 400
     result = calculate_score(mock_data)
 
     assert result["priority"] == "Medium"

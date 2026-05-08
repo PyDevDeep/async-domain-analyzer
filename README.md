@@ -64,6 +64,31 @@ poetry run python -m src.main --input data/seeds.csv --rerun-failed
 - **Works with any input:** A plain domain list or a complex CSV — the system finds failed domains via the database
 - **Time savings:** Re-scrapes only domains with `status=error`; successful ones are pulled from cache
 
+### 📊 Export Sorting by Relevance (Smart Export Order)
+- **Configurable sorting:** `.env` parameter `EXPORT_SORT_BY_RELEVANCE=true` to sort CSV by score
+- **Two-level sorting:** First by score (100→0), then alphabetically for ties
+- **Preserve original order:** Default `false` — domains in CSV appear in the same order as input file
+- **NULL-safe:** Domains without score (failed scraping) automatically moved to the end of the list
+
+**Example `.env` configuration:**
+```bash
+# Sort CSV by relevance (High Priority → Low Priority)
+EXPORT_SORT_BY_RELEVANCE=true
+
+# Or preserve original order (default)
+EXPORT_SORT_BY_RELEVANCE=false
+```
+
+**Output when `EXPORT_SORT_BY_RELEVANCE=true`:**
+```
+domain,score,priority
+apple.com,100,High         ← highest score
+wikipedia.org,100,High     ← same score → alphabetical order
+amazon.com,85,High
+httpbin.org,40,Low
+fake-domain.com,0,Low      ← failed domains at the end
+```
+
 ### ⚡ Async I/O + Connection Pooling
 - **5 workers process 100 domains in ~20 seconds** (vs. 100 seconds in the synchronous variant)
 - **Configurable parallelism:** `--workers 10` for fast VPS or `--workers 2` for resource-constrained environments
